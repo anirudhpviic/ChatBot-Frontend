@@ -1,4 +1,5 @@
 import ChatInterface from "@/components/ChatInterface";
+import "../socket/socket"
 
 const Home = () => {
   return (

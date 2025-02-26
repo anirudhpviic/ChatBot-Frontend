@@ -48,6 +48,7 @@ export default function ChatInterface() {
         { _id: uuidv4(), message, sender: "user" },
       ]);
 
+      setLoading(true);
       try {
         const res = await axios.post("http://localhost:3002/chat", {
           userText: message,
@@ -55,18 +56,20 @@ export default function ChatInterface() {
         });
         console.log("res", res);
 
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            _id: uuidv4(),
-            jokes: res.data.data.jokes,
-            mood: res.data.data.mood,
-            color: res.data.data.color,
-            sender: "bot",
-          },
-        ]);
+        // setMessages((prevMessages) => [
+        //   ...prevMessages,
+        //   {
+        //     _id: uuidv4(),
+        //     jokes: res.data.data.jokes,
+        //     mood: res.data.data.mood,
+        //     color: res.data.data.color,
+        //     sender: "bot",
+        //   },
+        // ]);
       } catch (error) {
         console.error(error);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -79,6 +82,7 @@ export default function ChatInterface() {
           <MessageBubble key={message._id} message={message} />
         ))}
       </div>
+      {loading && <div className="px-4 text-right">Generating...</div>}
       <InputBox onSendMessage={handleSendMessage} />
     </div>
   );
