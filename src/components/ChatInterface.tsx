@@ -4,8 +4,8 @@ import InputBox from "./InputBox";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { socket } from "../socket/socket";
-import parse from 'html-react-parser';
-
+import parse from "html-react-parser";
+import { Button } from "./ui/button";
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Array<any>>([]);
@@ -22,8 +22,15 @@ export default function ChatInterface() {
 
     socket.on("finalResponse", (data) => {
       console.log("Final response:", data);
-      // setPartialResponse("");
-      // Update your UI with the final response
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: uuidv4(),
+          response: data,
+          sender: "bot",
+        },
+      ]);
+      setPartialResponse("");
     });
 
     return () => {
@@ -37,25 +44,29 @@ export default function ChatInterface() {
       const res = await axios.post("http://localhost:3002/user/create", {
         nickName,
       });
-      console.log("response", res);
-      setUserId(res.data.data.user._id);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          _id: uuidv4(),
-          message: `${res.data.data.greetings}, ${res.data.data.introduction}`,
-          mood: "",
-          color: "gray",
-          sender: "bot",
-          jokes: [],
-        },
-      ]);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          nickName,
+          _id: res.data.data._id,
+        })
+      );
+
+      setUserId(res.data.data._id);
     } catch (error) {
       console.error(error);
     }
   };
 
   useEffect(() => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      setNickName(JSON.parse(user).nickName);
+      setUserId(JSON.parse(user)._id);
+      return;
+    }
+
     const userNickname = prompt("Please enter your nickname:");
     if (userNickname) {
       setNickName(userNickname);
@@ -67,7 +78,7 @@ export default function ChatInterface() {
     if (message.trim()) {
       setMessages((prevMessages) => [
         ...prevMessages,
-        { _id: uuidv4(), message, sender: "user" },
+        { _id: uuidv4(), question: message, sender: "user" },
       ]);
 
       setLoading(true);
@@ -76,18 +87,6 @@ export default function ChatInterface() {
           userText: message,
           userId,
         });
-        console.log("res", res);
-
-        // setMessages((prevMessages) => [
-        //   ...prevMessages,
-        //   {
-        //     _id: uuidv4(),
-        //     jokes: res.data.data.jokes,
-        //     mood: res.data.data.mood,
-        //     color: res.data.data.color,
-        //     sender: "bot",
-        //   },
-        // ]);
       } catch (error) {
         console.error(error);
       } finally {
@@ -96,19 +95,35 @@ export default function ChatInterface() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    window.location.reload();
+  };
+
   return (
     <div className="flex flex-col h-full">
+      <div className="flex justify-between m-4">
+        <div>
+          <h2>Nickname: {nickName}</h2>
+          <h3 className="text-red-500">UserId: {userId}</h3>
+        </div>
+        <Button onClick={handleLogout}>Logout</Button>
+      </div>
       <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-        <h2>{nickName}</h2>
-        <div className="bg-[#f0ec29]">asdfasdf</div>
-        {messages.map((message) => (
-          <MessageBubble key={message._id} message={message} />
-        ))}
-        
-        {partialResponse && (
-          // <div  dangerouslySetInnerHTML={{ __html: partialResponse }} />
-          <div className="bg-[#6529f0]">{parse(partialResponse)}</div>
+        {messages.map((message) => {
+          if (message.sender === "user") {
+            return <MessageBubble key={message._id} message={message} />;
+          } else if (message.sender === "bot") {
+            return <MessageBubble key={message._id} message={message} />;
+          }
+        })}
 
+        {partialResponse && (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: "<div> " + partialResponse + "</div>",
+            }}
+          ></div>
         )}
       </div>
       {loading && <div className="px-4 text-right">Generating...</div>}
